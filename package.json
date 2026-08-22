@@ -1,0 +1,17 @@
+{
+  "name": "pro-sites-agent",
+  "version": "1.0.0",
+  "description": "AI sales agent",
+  "type": "module",
+  "scripts": {
+    "agent:daily": "node src/agents/sales.ts",
+    "agent:test": "node src/agents/sales.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.8.0",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.8.0"
+  }
+}
