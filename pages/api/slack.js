@@ -1,13 +1,16 @@
 export default async function handler(req, res) {
-  const SLACK_WEBHOOK =
-    "https://hooks.slack.com/services/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";
+  const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK;
+
+  if (!SLACK_WEBHOOK) {
+    return res.status(200).json({ success: false, error: "Webhook not configured" });
+  }
 
   try {
     const response = await fetch(SLACK_WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: "✅ ProSites Agent - System Working! Leads: 20 | Emails: 10 | Status: Active",
+        text: "✅ ProSites Agent - System Working!\n📊 Leads: 20 | Emails: 10 | Status: Active",
       }),
     });
 
