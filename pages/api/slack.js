@@ -4,65 +4,56 @@ export default async function handler(req, res) {
   const RESEND_KEY = process.env.RESEND_API_KEY;
 
   try {
-    // STEP 1: Scrape leads from Apollo (fixed endpoint)
-    const apolloRes = await fetch("https://api.apollo.io/v1/people/search", {
+    // Test Apollo first
+    const apolloRes = await fetch("https://api.apollo.io/api/v1/people/search", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": "no-cache",
         "X-Api-Key": APOLLO_KEY,
       },
       body: JSON.stringify({
         page: 1,
         per_page: 10,
-        person_titles: ["founder", "ceo", "owner"],
+        person_titles: ["founder", "ceo"],
         person_locations: ["United States"],
-        contact_email_status: ["verified", "guessed"],
       }),
     });
 
     const apolloData = await apolloRes.json();
-    console.log("Apollo response:", JSON.stringify(apolloData).slice(0, 500));
-    
     const leads = apolloData.people || [];
     const validLeads = leads.filter(p => p.email);
 
-    // STEP 2: Send emails (only if domain verified)
+    // Send emails via Resend
     let emailsSent = 0;
     for (const lead of validLeads.slice(0, 5)) {
-      try {
-        const emailRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${RESEND_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "Vishal from ProSites <outreach@pro-sites.com>",
-            to: lead.email,
-            subject: `Quick question about ${lead.organization?.name || "your business"}`,
-            html: `
-              <p>Hi ${lead.first_name || "there"},</p>
-              <p>I help founders like you get a modern, professional website that actually converts.</p>
-              <p>Would love to show you what we could build for ${lead.organization?.name || "your company"}.</p>
-              <p>Interested in a free mockup?</p>
-              <p>Best,<br/>Vishal<br/>ProSites.com</p>
-            `,
-          }),
-        });
+      const emailRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${RESEND_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Vishal from ProSites <outreach@pro-sites.online>",
+          to: lead.email,
+          subject: `Website idea for ${lead.organization?.name || "your business"}`,
+          html: `
+            <p>Hi ${lead.first_name || "there"},</p>
+            <p>I build modern websites for US founders — fast and affordable ($500-$1000).</p>
+            <p>Can I show you a free mockup for ${lead.organization?.name || "your business"}?</p>
+            <p>Best,<br/>Vishal<br/>ProSites.online</p>
+          `,
+        }),
+      });
 
-        if (emailRes.ok) emailsSent++;
-      } catch (e) {
-        console.log("Email error:", e.message);
-      }
+      if (emailRes.ok) emailsSent++;
     }
 
-    // STEP 3: Slack report
+    // Slack report
     await fetch(SLACK_WEBHOOK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `🤖 *ProSites Daily Report*\n📊 Leads Found: ${leads.length}\n✅ Valid Emails: ${validLeads.length}\n📧 Emails Sent: ${emailsSent}\n🔑 Apollo Status: ${apolloData.pagination ? "✅ Working" : "❌ Check Key"}\n💰 Status: Running!`,
+        text: `🤖 *ProSites Daily Report*\n📊 Leads Found: ${leads.length}\n✅ Valid Emails: ${validLeads.length}\n📧 Emails Sent: ${emailsSent}\n🔑 Apollo: ${apolloData.pagination ? "✅ Working" : "❌ Error: " + JSON.stringify(apolloData)}\n💰 Status: Running!`,
       }),
     });
 
@@ -71,7 +62,7 @@ export default async function handler(req, res) {
       leads: leads.length,
       validLeads: validLeads.length,
       emailsSent,
-      apolloRaw: apolloData,
+      apolloStatus: apolloData.pagination ? "working" : apolloData,
     });
 
   } catch (error) {
@@ -79,7 +70,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `❌ ProSites Agent Error: ${error.message}`,
+        text: `❌ Error: ${error.message}`,
       }),
     });
 
