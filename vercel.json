@@ -1,6 +1,12 @@
 {
-  "crons": [{
-    "path": "/api/cron/sales-agent",
-    "schedule": "0 3 * * *"
-  }]
+  "buildCommand": "next build",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/slack",
+      "schedule": "30 3 * * *"
+    }
+  ]
 }
