@@ -15,37 +15,28 @@
   <div id="result">Waiting...</div>
 
   <script>
-    async function testAgent() {
-      const result = document.getElementById('result');
-      result.innerHTML = 'Testing...';
-      
-      try {
-        const response = await fetch('https://hooks.slack.com/services/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', {
-          method: 'POST',
-          headers: { 'Content-type': 'application/json' },
-          body: JSON.stringify({
-            text: '✅ ProSites Agent Test - System Working!',
-            blocks: [
-              {
-                type: 'section',
-                text: {
-                  type: 'mrkdwn',
-                  text: '*✅ ProSites Agent*\n🧪 Test Message\n🚀 Status: Webhook Working!',
-                },
-              },
-            ],
-          }),
-        });
+   <script>
+  async function testAgent() {
+    const result = document.getElementById('result');
+    result.innerHTML = 'Testing...';
+    
+    try {
+      const response = await fetch('/api/slack', {
+        method: 'POST',
+      });
 
-        if (response.ok) {
-          result.innerHTML = '✅ Message sent to Slack! Check #sales-bot channel now.';
-        } else {
-          result.innerHTML = '❌ Error: ' + response.status;
-        }
-      } catch (error) {
-        result.innerHTML = '❌ Error: ' + error.message;
+      const data = await response.json();
+
+      if (data.success) {
+        result.innerHTML = '✅ Message sent to Slack! Check #sales-bot channel now.';
+      } else {
+        result.innerHTML = '❌ Error: ' + data.error;
       }
+    } catch (error) {
+      result.innerHTML = '❌ Error: ' + error.message;
     }
+  }
+</script>
   </script>
 </body>
 </html>
