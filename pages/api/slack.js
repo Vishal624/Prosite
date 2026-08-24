@@ -42,8 +42,8 @@ export default async function handler(req, res) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            from: "Vishal from ProSites <outreach@pro-sites.online>",
-            to: lead.email,
+            from: "Vishal from ProSites <onboarding@resend.dev>",
+            to:"vishal0786sandhu@gmail.com",
             subject: `Quick question about ${lead.company}'s website`,
             html: `
               <p>Hi ${lead.first_name},</p>
