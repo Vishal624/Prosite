@@ -8,17 +8,122 @@ generator client {
 }
 
 model Lead {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String
-  company       String
-  industry      String?
-  status        String    @default("new")
-  emailSentAt   DateTime?
-  emailOpened   Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id              String    @id @default(cuid())
+  firstName       String
+  lastName        String?
+  email           String    @unique
+  company         String
+  title           String?
+  industry        String?
+  website         String?
+  country         String    @default("US")
+  leadScore       Int       @default(50)
+  websiteScore    Int?
+  source          String    @default("apollo")
+  status          String    @default("new")
+  priority        String    @default("normal")
+  notes           String?
+  lastContactedAt DateTime?
+  nextFollowupAt  DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  events    LeadEvent[]
+  followups Followup[]
+  replies   Reply[]
+  deals     Deal[]
 
   @@index([status])
+  @@index([industry])
+  @@index([leadScore])
+  @@index([nextFollowupAt])
+}
+
+model LeadEvent {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  eventType   String
+  actorType   String   @default("AI")
+  title       String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([eventType])
   @@index([createdAt])
+}
+
+model Followup {
+  id             String    @id @default(cuid())
+  leadId         String
+  lead           Lead      @relation(fields: [leadId], references: [id])
+  sequenceNumber Int
+  scheduledAt    DateTime
+  status         String    @default("pending")
+  subject        String?
+  message        String?
+  sentAt         DateTime?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([status])
+  @@index([scheduledAt])
+}
+
+model Reply {
+  id            String   @id @default(cuid())
+  leadId        String
+  lead          Lead     @relation(fields: [leadId], references: [id])
+  sender        String
+  subject       String?
+  body          String
+  intent        String?
+  confidence    Float?
+  requiresHuman Boolean  @default(false)
+  aiSummary     String?
+  handled       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  @@index([leadId])
+  @@index([intent])
+  @@index([requiresHuman])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  leadId            String
+  lead              Lead      @relation(fields: [leadId], references: [id])
+  value             Float
+  currency          String    @default("USD")
+  stage             String    @default("QUALIFIED")
+  probability       Int       @default(10)
+  expectedCloseDate DateTime?
+  status            String    @default("open")
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([stage])
+  @@index([status])
+}
+
+model DailyMetric {
+  id              String   @id @default(cuid())
+  date            DateTime @unique
+  leadsAdded      Int      @default(0)
+  emailsSent      Int      @default(0)
+  emailsFailed    Int      @default(0)
+  followupsSent   Int      @default(0)
+  repliesReceived Int      @default(0)
+  positiveReplies Int      @default(0)
+  dealsWon        Int      @default(0)
+  revenue         Float    @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([date])
 }
