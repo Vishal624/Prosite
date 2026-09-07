@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const NEW_LEADS = [
+  { firstName: "Vishal", lastName: "Kumar", email: "vis624hal@gmail.com", company: "PROSITES", title: "CEO", industry: "information technology & services", leadScore: 100 },
   { firstName: "Ashpreet", lastName: "Bedi", email: "ashpreet@phidata.com", company: "Agno", title: "CEO", industry: "information technology & services", leadScore: 72 },
   { firstName: "Eden", lastName: "Chen", email: "eden@firstlook.gg", company: "FirstLook.gg", title: "CEO", industry: "computer games", leadScore: 68 },
   { firstName: "Oswaldo", lastName: "Medrano", email: "oswald@progresus.co", company: "Progresus", title: "CEO", industry: "information technology & services", leadScore: 70 },
