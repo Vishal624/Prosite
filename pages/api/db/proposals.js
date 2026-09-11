@@ -72,7 +72,7 @@ export default async function handler(req, res) {
         headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "Vishal from ProSites <outreach@pro-sites.online>",
-          reply_to: "vishal0786sandhu@gmail.com",
+          
           to: lead.email,
           subject: `Website Proposal for ${lead.company} — $${value}`,
           html: `
