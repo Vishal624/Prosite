@@ -171,7 +171,6 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
           from: "Vishal from ProSites <outreach@pro-sites.online>",
-          reply_to: "vishal0786sandhu@gmail.com",
             to: lead.email,
             subject,
             html,
