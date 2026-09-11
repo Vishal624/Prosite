@@ -3,7 +3,6 @@ const prisma = new PrismaClient();
 
 const ALL_LEADS = [
   // ORIGINAL 24
-   { firstName: "virender", email: "vk509816@gmail.com", company: "Lucida Surfaces", industry: "building materials", leadScore: 72 },
   { firstName: "Eli", email: "eli@liveonlucida.com", company: "Lucida Surfaces", industry: "building materials", leadScore: 72 },
   { firstName: "Conrad", email: "conrad@publicize.co", company: "Publicize", industry: "PR", leadScore: 68 },
   { firstName: "Andrew", email: "andrew@acquire.com", company: "acquire.com", industry: "tech", leadScore: 91 },
@@ -112,7 +111,7 @@ export default async function handler(req, res) {
           const r = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.online>", reply_to: "vishal0786sandhu@gmail.com", to: record.email, subject, html }),
+            body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.online>", to: record.email, subject, html }),
           });
           if (r.ok) {
             await prisma.lead.update({ where: { id: record.id }, data: { status: "contacted", lastContactedAt: new Date() } });
