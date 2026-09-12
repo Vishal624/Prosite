@@ -1,219 +1,78 @@
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+function getEmail(firstName, company, industry) {
+  const i = (industry || "").toLowerCase();
+  if (["saas","tech","ai","fintech","hr tech","information technology & services","community platform","lead generation","tech consulting"].some(x => i.includes(x)))
+    return { subject: `${company}'s website is costing you signups`, html: `<p>Hi ${firstName},</p><p>${company} looks solid — but your website isn't converting the way it should.</p><p>I build high-converting websites for founders in 5-7 days for $500–$1,000. Want a free audit?</p><p>Reply YES and I'll get it to you within 24 hours.</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+  if (["pr","sales consulting","recruiting","staffing","executive search","it services","management consulting"].some(x => i.includes(x)))
+    return { subject: `Are clients finding ${company} online?`, html: `<p>Hi ${firstName},</p><p>In your industry, your website is the first impression a client gets.</p><p>I build professional websites for service businesses in under a week for $500–$1,000. Free mockup for ${company}?</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+  if (["media","entertainment","3d media","online media"].some(x => i.includes(x)))
+    return { subject: `${company} deserves a better online presence`, html: `<p>Hi ${firstName},</p><p>The work behind ${company} is impressive — but your website doesn't quite match that energy.</p><p>I design bold, modern websites for creative founders in 5-7 days for $500–$1,000. Free concept?</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+  if (["hospitality","hotels"].some(x => i.includes(x)))
+    return { subject: `Is ${company}'s website winning bookings?`, html: `<p>Hi ${firstName},</p><p>In hospitality, your website is your front desk. I build modern hospitality sites in under a week for $500–$1,000. Free mockup?</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+  if (["marketing","advertising","public relations"].some(x => i.includes(x)))
+    return { subject: `Is ${company}'s website generating leads for you?`, html: `<p>Hi ${firstName},</p><p>You help others with marketing — but is ${company}'s site generating enough leads for you? I build high-converting sites in 5-7 days for $500–$1,000. Free audit?</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+  return { subject: `Quick thought on ${company}'s website`, html: `<p>Hi ${firstName},</p><p>I came across ${company} and think there's an opportunity to win more business with a sharper website.</p><p>I build modern sites for US founders in 5-7 days for $500–$1,000. Free mockup — want to see?</p><p>Reply YES and I'll send it over.</p><p>Best,<br/>Vishal<br/>ProSites.online</p>` };
+}
+
 export default async function handler(req, res) {
-  const SLACK_WEBHOOK = process.env.SLACK_WEBHOOK;
-  const RESEND_KEY = process.env.RESEND_API_KEY;
-
-  // Email templates by industry
-  function getEmail(lead) {
-    const { first_name, company, industry } = lead;
-
-    // SaaS / Tech founders
-    if (["SaaS", "tech", "AI consulting", "tech consulting", "community platform", "lead generation", "HR tech", "fintech"].includes(industry)) {
-      return {
-        subject: `${company}'s website is costing you signups`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>I looked at <strong>${company}</strong> — the product looks solid, but your website isn't converting the way it should.</p>
-          <p>Most SaaS sites lose <strong>60-70% of visitors</strong> in the first 5 seconds because of slow load times, weak headlines, and no clear CTA above the fold.</p>
-          <p>I build high-converting websites for SaaS founders like you — in <strong>5-7 days for $500–$1,000</strong>. No bloated agencies, no 3-month timelines.</p>
-          <p>Can I send you a <strong>free website audit</strong> for ${company}? I'll show you exactly what's leaking conversions and how I'd fix it.</p>
-          <p>Just reply <strong>"YES"</strong> and I'll get it to you within 24 hours.</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online<br/>
-          <small>Modern websites for founders — fast & affordable</small></p>
-        `
-      };
-    }
-
-    // Consulting / Recruiting / Staffing / Executive Search
-    if (["PR", "sales consulting", "recruiting", "staffing", "executive search", "IT services"].includes(industry)) {
-      return {
-        subject: `Are clients finding ${company} online?`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>In consulting and professional services, your website is often the <strong>first impression</strong> a potential client gets.</p>
-          <p>I checked out <strong>${company}</strong> and I think there's a big opportunity to win more clients with a sharper online presence.</p>
-          <p>I build professional websites for service businesses like yours — <strong>fast, modern, and built to convert</strong> — in under a week for $500–$1,000.</p>
-          <p>I'd love to put together a <strong>free mockup</strong> showing what ${company}'s site could look like. No strings attached.</p>
-          <p>Interested? Just reply and I'll send it over.</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online</p>
-        `
-      };
-    }
-
-    // Media / Entertainment
-    if (["media", "entertainment", "3D media"].includes(industry)) {
-      return {
-        subject: `${company} deserves a better online presence`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>The creative work behind <strong>${company}</strong> is impressive — but I noticed your website doesn't quite match that energy.</p>
-          <p>For media and entertainment brands, your website is your <strong>stage</strong>. It needs to instantly communicate who you are and why people should care.</p>
-          <p>I design bold, modern websites for creative founders — <strong>done in 5-7 days for $500–$1,000</strong>.</p>
-          <p>Want to see a <strong>free concept design</strong> for ${company}? I'll build it and send it to you — no commitment needed.</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online</p>
-        `
-      };
-    }
-
-    // Hospitality / Hotels
-    if (["hospitality", "hotels"].includes(industry)) {
-      return {
-        subject: `Is ${company}'s website winning bookings?`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>In hospitality, <strong>your website is your front desk</strong> — it's the first thing guests see before they decide to book.</p>
-          <p>I checked out <strong>${company}</strong> and I believe a modern, fast-loading website could significantly increase your direct bookings.</p>
-          <p>I build hospitality websites that look premium and convert visitors into guests — <strong>in under a week for $500–$1,000</strong>.</p>
-          <p>Can I put together a <strong>free mockup</strong> for ${company}? No cost, no obligation — just a look at what's possible.</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online</p>
-        `
-      };
-    }
-
-    // Automotive / Hardware / Physical products
-    if (["automotive AI", "building materials", "furniture", "telecom"].includes(industry)) {
-      return {
-        subject: `${company}'s website — quick thought`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>I came across <strong>${company}</strong> and was impressed by what you're building.</p>
-          <p>One thing I noticed — your online presence doesn't quite reflect the quality of your product. In today's market, a <strong>slow or outdated website costs you sales</strong> before a prospect even talks to you.</p>
-          <p>I build clean, modern websites for product companies like yours — <strong>in 5-7 days for $500–$1,000</strong>.</p>
-          <p>I'd love to send you a <strong>free mockup</strong> of what a new ${company} site could look like. Would that be useful?</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online</p>
-        `
-      };
-    }
-
-    // Marketing / Data / Lead gen
-    if (["marketing", "marketing/data", "lead generation"].includes(industry)) {
-      return {
-        subject: `Your website is your best lead gen tool — is it working?`,
-        html: `
-          <p>Hi ${first_name},</p>
-          <p>You're in the business of generating leads for others — but I'm curious, is <strong>${company}'s website</strong> generating enough leads for you?</p>
-          <p>I build high-converting websites specifically designed to turn visitors into leads — <strong>done in under a week for $500–$1,000</strong>.</p>
-          <p>I'd love to show you what I could do for ${company}. Can I send over a <strong>free site audit + mockup</strong>?</p>
-          <p>Best,<br/>
-          <strong>Vishal</strong><br/>
-          ProSites.online</p>
-        `
-      };
-    }
-
-    // Default (catch-all)
-    return {
-      subject: `Quick thought on ${company}'s website`,
-      html: `
-        <p>Hi ${first_name},</p>
-        <p>I came across <strong>${company}</strong> and noticed your website might not be doing full justice to what you've built.</p>
-        <p>I help US founders get a <strong>modern, professional website that converts</strong> — built in 5-7 days for $500–$1,000. No long timelines, no bloated costs.</p>
-        <p>Would you be open to a <strong>free mockup</strong> of what a new ${company} site could look like? No commitment — just a look.</p>
-        <p>Reply <strong>"YES"</strong> and I'll get it to you within 24 hours.</p>
-        <p>Best,<br/>
-        <strong>Vishal</strong><br/>
-        ProSites.online<br/>
-        <small>Built 20+ sites for US founders this year</small></p>
-      `
-    };
-  }
-
-  const leads = [
-    { first_name: "Eli", email: "eli@liveonlucida.com", company: "Lucida Surfaces", industry: "building materials" },
-    { first_name: "Conrad", email: "conrad@publicize.co", company: "Publicize", industry: "PR" },
-    { first_name: "Andrew", email: "andrew@acquire.com", company: "acquire.com", industry: "tech" },
-    { first_name: "Tom", email: "tombilyeu@impacttheory.com", company: "Impact Theory", industry: "media" },
-    { first_name: "Tito", email: "tito@altisales.com", company: "AltiSales", industry: "sales consulting" },
-    { first_name: "Giovanna", email: "giovanna@hohmp.com", company: "Heart of Hollywood", industry: "entertainment" },
-    { first_name: "Shawn", email: "sdoyle@releaseteam.com", company: "ReleaseTEAM", industry: "IT services" },
-    { first_name: "David", email: "david@davidbagga.com", company: "David Bagga Co", industry: "recruiting" },
-    { first_name: "Ruben", email: "ruben@outrival.com", company: "OutRival", industry: "SaaS" },
-    { first_name: "Dave", email: "dperry@blinkai.com", company: "BLiNKAI Automotive", industry: "automotive AI" },
-    { first_name: "Jamie", email: "jamie@thepeopleavenue.com", company: "People Avenue", industry: "staffing" },
-    { first_name: "Jake", email: "jake@groundswell.io", company: "Groundswell", industry: "fintech" },
-    { first_name: "Kevin", email: "kevin@hubble.social", company: "Hubble", industry: "community platform" },
-    { first_name: "Andrew", email: "andrew.price@poliigon.com", company: "Poliigon", industry: "3D media" },
-    { first_name: "Will", email: "william@uplead.com", company: "UpLead", industry: "lead generation" },
-    { first_name: "Kevin", email: "kbrody@kloverdata.com", company: "Klover Data", industry: "marketing" },
-    { first_name: "Jay", email: "jay@casperstudios.xyz", company: "Casper Studios", industry: "tech consulting" },
-    { first_name: "Paul", email: "pbarham@harrellhospitality.com", company: "Harrell Hospitality", industry: "hospitality" },
-    { first_name: "Debbie", email: "debbie@jhammerglobal.com", company: "Jack Hammer", industry: "executive search" },
-    { first_name: "Matt", email: "matt@wedgehr.com", company: "WedgeHR", industry: "HR tech" },
-    { first_name: "Steven", email: "swp@alpha.ac", company: "Alpha", industry: "AI consulting" },
-    { first_name: "Jason", email: "jason@phillipscollection.com", company: "Phillips Collection", industry: "furniture" },
-    { first_name: "Jennifer", email: "jen@risingteam.com", company: "Rising Team", industry: "SaaS" },
-    { first_name: "Joshua", email: "jbroder@vertawireless.com", company: "Verta", industry: "telecom" },
-  ];
+  const SLACK = process.env.SLACK_WEBHOOK;
+  const RESEND = process.env.RESEND_API_KEY;
 
   try {
-    let emailsSent = 0;
-    let emailsFailed = 0;
-    const errors = [];
+    // Get all leads from DB
+    const allLeads = await prisma.lead.findMany({
+      orderBy: { createdAt: "asc" },
+    });
 
-    for (const lead of leads) {
+    // Get metrics
+    const [emailsSentCount, followupsDue, positiveReplies, revenue] = await Promise.all([
+      prisma.leadEvent.count({ where: { eventType: "EMAIL_SENT" } }),
+      prisma.followup.count({ where: { status: "pending", scheduledAt: { lte: new Date() } } }),
+      prisma.reply.count({ where: { intent: "POSITIVE" } }),
+      prisma.deal.aggregate({ where: { status: "won" }, _sum: { value: true } }),
+    ]);
+
+    // Send emails to new leads only
+    const newLeads = allLeads.filter(l => l.status === "new");
+    let sent = 0, failed = 0;
+
+    for (const lead of newLeads) {
+      const { subject, html } = getEmail(lead.firstName, lead.company, lead.industry);
       try {
-        const { subject, html } = getEmail(lead);
-
-        const emailRes = await fetch("https://api.resend.com/emails", {
+        const r = await fetch("https://api.resend.com/emails", {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${RESEND_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-          from: "Vishal from ProSites <outreach@pro-sites.online>",
-            to: lead.email,
-            subject,
-            html,
-          }),
+          headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.online>", to: lead.email, subject, html }),
         });
-
-        if (emailRes.ok) {
-          emailsSent++;
-        } else {
-          const err = await emailRes.json();
-          errors.push(`${lead.first_name}: ${err.message || JSON.stringify(err)}`);
-          emailsFailed++;
-        }
-
-        await new Promise(r => setTimeout(r, 400));
-
-      } catch (e) {
-        emailsFailed++;
-        errors.push(`${lead.first_name}: ${e.message}`);
-      }
+        if (r.ok) {
+          await prisma.lead.update({ where: { id: lead.id }, data: { status: "contacted", lastContactedAt: new Date() } });
+          await prisma.leadEvent.create({ data: { leadId: lead.id, eventType: "EMAIL_SENT", actorType: "AI", title: "Initial cold email sent", metadata: { industry: lead.industry } } });
+          // Schedule followups
+          for (const [seq, days] of [[1,3],[2,7],[3,12],[4,18]]) {
+            const d = new Date(); d.setDate(d.getDate() + days);
+            await prisma.followup.upsert({ where: { id: `fu-${lead.id}-${seq}` }, update: {}, create: { id: `fu-${lead.id}-${seq}`, leadId: lead.id, sequenceNumber: seq, scheduledAt: d, status: "pending" } });
+          }
+          sent++;
+        } else { failed++; }
+        await new Promise(r => setTimeout(r, 300));
+      } catch(e) { failed++; }
     }
 
-    await fetch(SLACK_WEBHOOK, {
+    // Slack report
+    const totalEmailed = emailsSentCount + sent;
+    await fetch(SLACK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `🤖 *ProSites Daily Report*\n📊 Total Leads: ${leads.length}\n📧 Emails Sent: ${emailsSent}\n❌ Failed: ${emailsFailed}\n${errors.length > 0 ? `🔍 Error: ${errors[0]}` : "✅ All emails sent!"}\n💰 Status: Running!\n\n🎯 *Personalized emails sent to:*\n${leads.slice(0, 5).map(l => `• ${l.first_name} - ${l.company}`).join('\n')}\n...and ${leads.length - 5} more!`,
+        text: `🤖 *ProSites Daily Report*\n📊 Total Leads: ${allLeads.length}\n📧 Total Emailed: ${totalEmailed}\n📨 New Today: ${sent}\n❌ Failed: ${failed}\n⏰ Follow-ups Due: ${followupsDue}\n💬 Positive Replies: ${positiveReplies}\n💰 Revenue: $${revenue._sum.value || 0}\n✅ Status: Running!\n\n🎯 *Sample leads:*\n${allLeads.slice(0,3).map(l=>`• ${l.firstName} - ${l.company}`).join('\n')}\n...and ${allLeads.length - 3} more!`,
       }),
     });
 
-    return res.status(200).json({
-      success: true,
-      emailsSent,
-      emailsFailed,
-      errors: errors.slice(0, 3),
-    });
-
-  } catch (error) {
-    await fetch(SLACK_WEBHOOK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: `❌ Error: ${error.message}` }),
-    });
-    return res.status(200).json({ success: false, error: error.message });
-  }
+    return res.status(200).json({ success: true, totalLeads: allLeads.length, totalEmailed, newSent: sent, failed });
+  } catch(e) {
+    await fetch(SLACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `❌ Error: ${e.message}` }) });
+    return res.status(500).json({ success: false, error: e.message });
+  } finally { await prisma.$disconnect(); }
 }
