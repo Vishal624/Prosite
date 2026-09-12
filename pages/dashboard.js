@@ -20,7 +20,7 @@ export default function Dashboard() {
       ]);
       const [mData, lData, pData] = await Promise.all([mRes.json(), lRes.json(), pRes.json()]);
       if (mData.success) setMetrics(mData.metrics);
-      if (lData.success) setLeads(lData.leads);
+      if (lData.leads) setLeads(lData.leads);
       if (pData.success) setProposals(pData.proposals);
     } catch(e) { console.error(e); } finally { setLoading(false); }
   }
