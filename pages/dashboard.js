@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(null);
@@ -10,13 +10,19 @@ export default function Dashboard() {
   const [proposalValue, setProposalValue] = useState("750");
   const [sending, setSending] = useState(false);
   const [toast, setToast] = useState(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  useEffect(() => { fetchAll(); const i = setInterval(fetchAll, 30000); return () => clearInterval(i); }, []);
+  useEffect(() => {
+    fetchAll();
+    const i = setInterval(() => fetch("/api/db/metrics").then(r=>r.json()).then(d=>{ if(d.success) setMetrics(d.metrics); }), 30000);
+    return () => clearInterval(i);
+  }, []);
 
   async function fetchAll() {
     try {
       const [mRes, lRes, pRes] = await Promise.all([
-        fetch("/api/db/metrics"), fetch("/api/db/leads?limit=50"), fetch("/api/db/proposals"),
+        fetch("/api/db/metrics"), fetch("/api/db/leads?limit=200"), fetch("/api/db/proposals"),
       ]);
       const [mData, lData, pData] = await Promise.all([mRes.json(), lRes.json(), pRes.json()]);
       if (mData.success) setMetrics(mData.metrics);
@@ -24,6 +30,14 @@ export default function Dashboard() {
       if (pData.success) setProposals(pData.proposals);
     } catch(e) { console.error(e); } finally { setLoading(false); }
   }
+
+  const filteredLeads = useMemo(() => {
+    return leads.filter(l => {
+      const matchSearch = !search || `${l.firstName} ${l.company} ${l.email}`.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = statusFilter === "all" || l.status === statusFilter;
+      return matchSearch && matchStatus;
+    });
+  }, [leads, search, statusFilter]);
 
   function showToast(msg, color = "#22c55e") {
     setToast({ msg, color });
@@ -46,17 +60,10 @@ export default function Dashboard() {
     if (!proposalModal) return;
     setSending(true);
     try {
-      const r = await fetch("/api/db/proposals", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leadId: proposalModal.id, value: parseInt(proposalValue) }),
-      });
+      const r = await fetch("/api/db/proposals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ leadId: proposalModal.id, value: parseInt(proposalValue) }) });
       const d = await r.json();
-      if (d.success) {
-        showToast(`💼 Proposal sent to ${proposalModal.firstName}!`);
-        setProposalModal(null);
-        fetchAll();
-      } else { showToast(`❌ Error: ${d.error}`, "#ef4444"); }
+      if (d.success) { showToast(`💼 Proposal sent to ${proposalModal.firstName}!`); setProposalModal(null); fetchAll(); }
+      else showToast(`❌ Error: ${d.error}`, "#ef4444");
     } catch(e) { showToast(`❌ ${e.message}`, "#ef4444"); }
     setSending(false);
   }
@@ -103,6 +110,7 @@ export default function Dashboard() {
     btnGreen: { background:"#14532d", color:"#4ade80", border:"1px solid #166534" },
     btnBlue: { background:"#1e3a5f", color:"#60a5fa", border:"1px solid #1e40af" },
     select: { fontSize:11, padding:"3px 6px", borderRadius:6, border:"1px solid #333", background:"#2a2a2a", color:"#f5f5f5", cursor:"pointer" },
+    searchBar: { width:"100%", padding:"8px 12px", borderRadius:6, border:"1px solid #2a2a2a", background:"#111", color:"#f5f5f5", fontSize:13, marginBottom:12, outline:"none" },
     modal: { position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" },
     modalBox: { background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:12, padding:24, width:400 },
     input: { width:"100%", padding:"8px 12px", borderRadius:6, border:"1px solid #333", background:"#2a2a2a", color:"#f5f5f5", fontSize:14, marginBottom:12, boxSizing:"border-box" },
@@ -124,12 +132,16 @@ export default function Dashboard() {
   const emailsSent = m.emailsSent || 0;
   const followupsDue = m.followupsDue || 0;
   const positiveReplies = m.positiveReplies || 0;
-  const revenue = m.revenue || 0;
   const events = m.recentEvents || [];
   const byIndustry = m.leadsByIndustry || [];
   const wonDeals = proposals.filter(p => p.status === "won");
   const totalRevenue = wonDeals.reduce((s, d) => s + d.value, 0);
   const openDeals = proposals.filter(p => p.status === "open");
+
+  // Real followup data from leads
+  const allFollowups = leads.flatMap(l => (l.followups || []).map(f => ({ ...f, lead: l })));
+  const pendingFollowups = allFollowups.filter(f => f.status === "pending");
+  const sentFollowups = allFollowups.filter(f => f.status === "sent");
 
   const navItems = [
     { id:"home", label:"Dashboard" },
@@ -144,14 +156,12 @@ export default function Dashboard() {
     <div style={s.app}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} * {box-sizing:border-box}`}</style>
 
-      {/* Toast */}
       {toast && (
         <div style={{ position:"fixed", top:16, right:16, background:toast.color, color:"#fff", padding:"10px 20px", borderRadius:8, fontSize:13, fontWeight:500, zIndex:300, boxShadow:"0 4px 12px rgba(0,0,0,0.3)" }}>
           {toast.msg}
         </div>
       )}
 
-      {/* Proposal Modal */}
       {proposalModal && (
         <div style={s.modal} onClick={() => setProposalModal(null)}>
           <div style={s.modalBox} onClick={e => e.stopPropagation()}>
@@ -172,7 +182,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Sidebar */}
       <div style={s.sidebar}>
         <div style={s.logo}>ProSites OS</div>
         {navItems.map(n => (
@@ -254,13 +263,24 @@ export default function Dashboard() {
         {page==="leads" && (
           <div style={s.card}>
             <div style={s.cardHead}>
-              <div style={s.cardTitle}>All leads ({leads.length})</div>
-              <span style={{fontSize:12,color:"#555"}}>Click "Propose" to send proposal</span>
+              <div style={s.cardTitle}>All leads ({filteredLeads.length}/{leads.length})</div>
+              <select style={s.select} value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}>
+                <option value="all">All statuses</option>
+                {["new","contacted","opened","replied","interested","closed","lost"].map(st=>(
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
             </div>
             <div style={{padding:"0 16px"}}>
+              <input
+                style={s.searchBar}
+                placeholder="Search by name, company, email..."
+                value={search}
+                onChange={e=>setSearch(e.target.value)}
+              />
               <div style={s.leadHead}><span>Lead</span><span>Industry</span><span>Score</span><span>Status</span><span>Update</span><span>Action</span></div>
-              {leads.map((lead,i) => (
-                <div key={lead.id} style={{...s.leadRow,...(i===leads.length-1?{borderBottom:"none"}:{})}}>
+              {filteredLeads.map((lead,i) => (
+                <div key={lead.id} style={{...s.leadRow,...(i===filteredLeads.length-1?{borderBottom:"none"}:{})}}>
                   <div>
                     <div style={{fontWeight:500,fontSize:13}}>{lead.firstName} — {lead.company}</div>
                     <div style={{color:"#555",fontSize:11}}>{lead.email}</div>
@@ -276,6 +296,7 @@ export default function Dashboard() {
                   <button style={{...s.btn,...s.btnBlue}} onClick={()=>setProposalModal(lead)}>💼 Propose</button>
                 </div>
               ))}
+              {filteredLeads.length===0 && <div style={{textAlign:"center",padding:24,color:"#555"}}>No leads match your search</div>}
             </div>
           </div>
         )}
@@ -284,26 +305,31 @@ export default function Dashboard() {
         {page==="followups" && <>
           <div style={{...s.kpiGrid,gridTemplateColumns:"repeat(3,1fr)"}}>
             <div style={s.kpi}><div style={{...s.kpiVal,color:"#ef4444"}}>{followupsDue}</div><div style={s.kpiLabel}>Due now</div></div>
-            <div style={s.kpi}><div style={{...s.kpiVal,color:"#f59e0b"}}>{m.followupsSent||0}</div><div style={s.kpiLabel}>Sent total</div></div>
-            <div style={s.kpi}><div style={{...s.kpiVal,color:"#22c55e"}}>{leads.length*4}</div><div style={s.kpiLabel}>Scheduled total</div></div>
+            <div style={s.kpi}><div style={{...s.kpiVal,color:"#f59e0b"}}>{sentFollowups.length}</div><div style={s.kpiLabel}>Sent total</div></div>
+            <div style={s.kpi}><div style={{...s.kpiVal,color:"#22c55e"}}>{pendingFollowups.length}</div><div style={s.kpiLabel}>Pending</div></div>
           </div>
           <div style={s.card}>
             <div style={s.cardHead}>
-              <div style={s.cardTitle}>Follow-up sequences — Day 3/7/12/18</div>
+              <div style={s.cardTitle}>Pending follow-ups ({pendingFollowups.length})</div>
               <button style={{...s.btn,...s.btnGreen}} onClick={sendFollowups}>Send due now</button>
             </div>
             <div style={{...s.cardBody,padding:"0 16px"}}>
-              {leads.slice(0,8).map((lead,i)=>(
-                <div key={lead.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<7?"1px solid #1f1f1f":"none",fontSize:12}}>
-                  <div><span style={{fontWeight:500}}>{lead.firstName} — {lead.company}</span></div>
-                  <div style={{display:"flex",gap:8}}>
-                    {[3,7,12,18].map(d=>(
-                      <span key={d} style={{fontSize:10,padding:"2px 6px",borderRadius:10,background:"#1e3a5f",color:"#60a5fa"}}>D{d}</span>
-                    ))}
+              {pendingFollowups.slice(0,20).map((f,i)=>(
+                <div key={f.id} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:i<19?"1px solid #1f1f1f":"none",fontSize:12}}>
+                  <div>
+                    <span style={{fontWeight:500}}>{f.lead.firstName} — {f.lead.company}</span>
+                    <span style={{color:"#555",marginLeft:8}}>{f.lead.email}</span>
+                  </div>
+                  <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{fontSize:10,padding:"2px 6px",borderRadius:10,background:"#1e3a5f",color:"#60a5fa"}}>Day {[3,7,12,18][f.sequenceNumber-1]||f.sequenceNumber}</span>
+                    <span style={{fontSize:11,color: new Date(f.scheduledAt)<new Date()?"#ef4444":"#555"}}>
+                      {new Date(f.scheduledAt).toLocaleDateString("en-IN",{day:"numeric",month:"short"})}
+                    </span>
                   </div>
                 </div>
               ))}
-              {leads.length>8 && <div style={{fontSize:12,color:"#555",textAlign:"center",padding:"8px 0"}}>+{leads.length-8} more leads</div>}
+              {pendingFollowups.length>20 && <div style={{fontSize:12,color:"#555",textAlign:"center",padding:"8px 0"}}>+{pendingFollowups.length-20} more</div>}
+              {pendingFollowups.length===0 && <div style={{textAlign:"center",padding:24,color:"#555"}}>No pending follow-ups</div>}
             </div>
           </div>
         </>}
@@ -337,9 +363,7 @@ export default function Dashboard() {
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
                     <span style={{fontWeight:600,color:"#22c55e"}}>${p.value}</span>
                     <span style={{...s.badge,background:p.status==="won"?"#14532d":"#1e3a5f",color:p.status==="won"?"#4ade80":"#60a5fa"}}>{p.status}</span>
-                    {p.status==="open" && (
-                      <button style={{...s.btn,...s.btnGreen}} onClick={()=>markWon(p.id,p.value)}>Mark Won 🎉</button>
-                    )}
+                    {p.status==="open" && <button style={{...s.btn,...s.btnGreen}} onClick={()=>markWon(p.id,p.value)}>Mark Won 🎉</button>}
                   </div>
                 </div>
               ))}
@@ -403,7 +427,7 @@ export default function Dashboard() {
                   {label:"Send follow-ups if due", urgency:"Daily", color:"#f59e0b"},
                   {label:"Send proposals to interested leads", urgency:"When ready", color:"#a78bfa"},
                   {label:"Get 25 more leads (Apollo)", urgency:"This week", color:"#60a5fa"},
-                  {label:"Connect Paperclip agents", urgency:"Week 2", color:"#555"},
+                  {label:"Buy pro-sites.in domain", urgency:"Sep 15", color:"#ef4444"},
                 ].map((item,i,arr)=>(
                   <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:i<arr.length-1?"1px solid #1f1f1f":"none",fontSize:13}}>
                     <span>{item.label}</span>
