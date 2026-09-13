@@ -21,20 +21,14 @@ export default async function handler(req, res) {
   const RESEND = process.env.RESEND_API_KEY;
 
   try {
-    // Get all leads from DB
-    const allLeads = await prisma.lead.findMany({
-      orderBy: { createdAt: "asc" },
-    });
-
-    // Get metrics
-    const [emailsSentCount, followupsDue, positiveReplies, revenue] = await Promise.all([
+    const [allLeads, emailsSentCount, followupsDue, positiveReplies, revenue] = await Promise.all([
+      prisma.lead.findMany({ orderBy: { createdAt: "asc" } }),
       prisma.leadEvent.count({ where: { eventType: "EMAIL_SENT" } }),
       prisma.followup.count({ where: { status: "pending", scheduledAt: { lte: new Date() } } }),
       prisma.reply.count({ where: { intent: "POSITIVE" } }),
       prisma.deal.aggregate({ where: { status: "won" }, _sum: { value: true } }),
     ]);
 
-    // Send emails to new leads only
     const newLeads = allLeads.filter(l => l.status === "new");
     let sent = 0, failed = 0;
 
@@ -47,32 +41,33 @@ export default async function handler(req, res) {
           body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.online>", to: lead.email, subject, html }),
         });
         if (r.ok) {
-          await prisma.lead.update({ where: { id: lead.id }, data: { status: "contacted", lastContactedAt: new Date() } });
-          await prisma.leadEvent.create({ data: { leadId: lead.id, eventType: "EMAIL_SENT", actorType: "AI", title: "Initial cold email sent", metadata: { industry: lead.industry } } });
-          // Schedule followups
-          for (const [seq, days] of [[1,3],[2,7],[3,12],[4,18]]) {
-            const d = new Date(); d.setDate(d.getDate() + days);
-            await prisma.followup.upsert({ where: { id: `fu-${lead.id}-${seq}` }, update: {}, create: { id: `fu-${lead.id}-${seq}`, leadId: lead.id, sequenceNumber: seq, scheduledAt: d, status: "pending" } });
-          }
+          const now = new Date();
+          await Promise.all([
+            prisma.lead.update({ where: { id: lead.id }, data: { status: "contacted", lastContactedAt: now } }),
+            prisma.leadEvent.create({ data: { leadId: lead.id, eventType: "EMAIL_SENT", actorType: "AI", title: "Initial cold email sent", metadata: { industry: lead.industry } } }),
+            ...[[1,3],[2,7],[3,12],[4,18]].map(([seq, days]) => {
+              const d = new Date(now); d.setDate(d.getDate() + days);
+              return prisma.followup.upsert({ where: { id: `fu-${lead.id}-${seq}` }, update: {}, create: { id: `fu-${lead.id}-${seq}`, leadId: lead.id, sequenceNumber: seq, scheduledAt: d, status: "pending" } });
+            }),
+          ]);
           sent++;
         } else { failed++; }
         await new Promise(r => setTimeout(r, 300));
       } catch(e) { failed++; }
     }
 
-    // Slack report
     const totalEmailed = emailsSentCount + sent;
     await fetch(SLACK, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `🤖 *ProSites Daily Report*\n📊 Total Leads: ${allLeads.length}\n📧 Total Emailed: ${totalEmailed}\n📨 New Today: ${sent}\n❌ Failed: ${failed}\n⏰ Follow-ups Due: ${followupsDue}\n💬 Positive Replies: ${positiveReplies}\n💰 Revenue: $${revenue._sum.value || 0}\n✅ Status: Running!\n\n🎯 *Sample leads:*\n${allLeads.slice(0,3).map(l=>`• ${l.firstName} - ${l.company}`).join('\n')}\n...and ${allLeads.length - 3} more!`,
+        text: `🤖 *ProSites Daily Report*\n📊 Total Leads: ${allLeads.length}\n📧 Total Emailed: ${totalEmailed}\n📨 New Today: ${sent}\n❌ Failed: ${failed}\n⏰ Follow-ups Due: ${followupsDue}\n💬 Positive Replies: ${positiveReplies}\n💰 Revenue: $${revenue._sum.value || 0}\n✅ Status: Running!`,
       }),
     });
 
     return res.status(200).json({ success: true, totalLeads: allLeads.length, totalEmailed, newSent: sent, failed });
   } catch(e) {
-    await fetch(SLACK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `❌ Error: ${e.message}` }) });
+    if (process.env.SLACK_WEBHOOK) await fetch(process.env.SLACK_WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `❌ Error: ${e.message}` }) });
     return res.status(500).json({ success: false, error: e.message });
   } finally { await prisma.$disconnect(); }
 }
