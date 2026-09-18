@@ -3,20 +3,20 @@ const prisma = new PrismaClient();
 
 const TEMPLATES = {
   1: {
-    subject: (c) => `Following up — ${c}`,
-    html: (n, c) => `<p>Hi ${n},</p><p>Just checking in on my last email about ${c}'s website.</p><p>Still happy to send a free mockup. Just reply YES.</p><p>Best,<br/>Vishal</p>`,
+    subject: (c) => `re: ${c}`,
+    html: (n, c) => `<p>Hi ${n},</p><p>Just wanted to follow up on my last note.</p><p>Still happy to share some ideas for ${c}'s website if you're open to it.</p><p>Vishal</p>`,
   },
   2: {
-    subject: (c) => `One quick thing about ${c}`,
-    html: (n, c) => `<p>Hi ${n},</p><p>I took a look at ${c}'s site — the mobile experience is likely costing you leads.</p><p>I can fix this in 5-7 days for $500–$1,000. Worth a look?</p><p>Best,<br/>Vishal</p>`,
+    subject: (c) => `${c} — one thing I noticed`,
+    html: (n, c) => `<p>Hi ${n},</p><p>I took another look at ${c}'s site. On mobile it's not quite as strong as it could be — that's usually where most traffic comes from these days.</p><p>Worth a conversation?</p><p>Vishal</p>`,
   },
   3: {
-    subject: (c) => `Last note from me — ${c}`,
-    html: (n, c) => `<p>Hi ${n},</p><p>I'll stop reaching out after this.</p><p>If ${c} ever needs a modern website that converts, I'm here.</p><p>Best of luck,<br/>Vishal</p>`,
+    subject: (c) => `last note from me`,
+    html: (n, c) => `<p>Hi ${n},</p><p>I'll stop following up after this — I know your inbox is busy.</p><p>If improving ${c}'s website ever becomes a priority, feel free to reach out.</p><p>Vishal</p>`,
   },
   4: {
-    subject: (c) => `Closing the loop — ${c}`,
-    html: (n, c) => `<p>Hi ${n},</p><p>Last email from me — don't want to clutter your inbox.</p><p>If timing is ever right for a new site for ${c}, you know where to find me.</p><p>Vishal</p>`,
+    subject: (c) => `closing the loop`,
+    html: (n, c) => `<p>Hi ${n},</p><p>This is my last email. If the timing is ever right for ${c}, you know where to find me.</p><p>Vishal</p>`,
   },
 };
 
