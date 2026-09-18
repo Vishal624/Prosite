@@ -318,7 +318,7 @@ export default async function handler(req, res) {
         emailSent: emailRes.ok,
         message: `Proposal sent to ${lead.email}!`,
       });
-    }
+    
 
     // PATCH - update deal stage
     if (req.method === "PATCH") {
