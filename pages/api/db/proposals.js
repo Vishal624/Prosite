@@ -175,7 +175,7 @@ export default async function handler(req, res) {
   } catch(e) {
     return res.status(500).json({ success: false, error: e.message });
   } finally { await prisma.$disconnect(); }
-}      });
+}     
 
       // Log event
       await prisma.leadEvent.create({
