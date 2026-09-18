@@ -95,47 +95,4 @@ export default async function handler(req, res) {
   } finally {
     await prisma.$disconnect();
   }
-}    if (req.method === "POST") {
-      const due = await prisma.followup.findMany({
-        where: { status: "pending", scheduledAt: { lte: new Date() } },
-        include: { lead: true },
-        take: 50,
-      });
-
-      let sent = 0, failed = 0;
-      for (const fu of due) {
-        const { lead } = fu;
-        // Stop if lead already replied
-        const replied = await prisma.reply.findFirst({ where: { leadId: lead.id } });
-        if (replied) {
-          await prisma.followup.update({ where: { id: fu.id }, data: { status: "cancelled", cancelReason: "lead_replied" } });
-          continue;
-        }
-        const tmpl = TEMPLATES[fu.sequenceNumber] || TEMPLATES[4];
-        try {
-          const r = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.in>", to: lead.email, subject: tmpl.subject(lead.company), html: tmpl.html(lead.firstName, lead.company) }),
-          });
-          if (r.ok) {
-            await prisma.followup.update({ where: { id: fu.id }, data: { status: "sent", sentAt: new Date() } });
-            await prisma.leadEvent.create({ data: { leadId: lead.id, eventType: "FOLLOWUP_SENT", actorType: "AI", title: `Follow-up #${fu.sequenceNumber} sent` } });
-            await prisma.lead.update({ where: { id: lead.id }, data: { lastContactedAt: new Date() } });
-            sent++;
-          } else { failed++; }
-          await new Promise(r => setTimeout(r, 300));
-        } catch(e) { failed++; }
-      }
-
-      if (SLACK && due.length > 0) {
-        await fetch(SLACK, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ text: `♻️ *Follow-up Report*\n📧 Sent: ${sent}\n❌ Failed: ${failed}\n📋 Due: ${due.length}` }) });
-      }
-
-      return res.status(200).json({ success: true, sent, failed, total: due.length });
-    }
-    return res.status(405).json({ error: "Method not allowed" });
-  } catch(e) {
-    return res.status(500).json({ success: false, error: e.message });
-  } finally { await prisma.$disconnect(); }
 }
