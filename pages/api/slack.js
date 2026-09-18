@@ -3,17 +3,54 @@ const prisma = new PrismaClient();
 
 function getEmail(firstName, company, industry) {
   const i = (industry || "").toLowerCase();
+
   if (["saas","tech","ai","fintech","hr tech","information technology & services","community platform","lead generation","tech consulting"].some(x => i.includes(x)))
-    return { subject: `${company}'s website is costing you signups`, html: `<p>Hi ${firstName},</p><p>${company} looks solid — but your website isn't converting the way it should.</p><p>I build high-converting websites for founders in 5-7 days for $500–$1,000. Want a free audit?</p><p>Reply YES and I'll get it to you within 24 hours.</p><p>Best,<br/>Vishal</p>` };
+    return {
+      subject: `quick question about ${company}`,
+      html: `<p>Hi ${firstName},</p><p>I was checking out ${company} — looks like you're doing interesting work.</p><p>I noticed your website could do a better job converting visitors into leads. I help tech founders fix this — usually takes about a week.</p><p>Would it be useful if I put together some quick ideas for ${company}? No strings attached.</p><p>Vishal</p>`
+    };
+
   if (["pr","sales consulting","recruiting","staffing","executive search","it services","management consulting"].some(x => i.includes(x)))
-    return { subject: `Are clients finding ${company} online?`, html: `<p>Hi ${firstName},</p><p>In your industry, your website is the first impression a client gets.</p><p>I build professional websites for service businesses in under a week for $500–$1,000. Free mockup for ${company}?</p><p>Best,<br/>Vishal</p>` };
-  if (["media","entertainment","3d media","online media"].some(x => i.includes(x)))
-    return { subject: `${company} deserves a better online presence`, html: `<p>Hi ${firstName},</p><p>The work behind ${company} is impressive — but your website doesn't quite match that energy.</p><p>I design bold, modern websites for creative founders in 5-7 days for $500–$1,000. Free concept?</p><p>Best,<br/>Vishal</p>` };
+    return {
+      subject: `${company} — quick thought`,
+      html: `<p>Hi ${firstName},</p><p>In your line of work, clients are checking your website before they ever call you.</p><p>I help service businesses make a stronger first impression online. Curious if that's something on your radar for ${company}?</p><p>Vishal</p>`
+    };
+
+  if (["media","entertainment","3d media","online media","publishing"].some(x => i.includes(x)))
+    return {
+      subject: `thought on ${company}'s online presence`,
+      html: `<p>Hi ${firstName},</p><p>I came across ${company} and was impressed by what you're building.</p><p>I work with founders in creative industries to make their websites match the quality of their work. Is that something you're thinking about?</p><p>Vishal</p>`
+    };
+
   if (["hospitality","hotels"].some(x => i.includes(x)))
-    return { subject: `Is ${company}'s website winning bookings?`, html: `<p>Hi ${firstName},</p><p>In hospitality, your website is your front desk. I build modern hospitality sites in under a week for $500–$1,000. Free mockup?</p><p>Best,<br/>Vishal</p>` };
+    return {
+      subject: `quick question for ${firstName}`,
+      html: `<p>Hi ${firstName},</p><p>I've been looking at hospitality businesses and how their websites affect bookings.</p><p>I help owners like you get more direct bookings through a better website. Worth a quick chat about ${company}?</p><p>Vishal</p>`
+    };
+
   if (["marketing","advertising","public relations"].some(x => i.includes(x)))
-    return { subject: `Is ${company}'s website generating leads for you?`, html: `<p>Hi ${firstName},</p><p>You help others with marketing — but is ${company}'s site generating enough leads for you? I build high-converting sites in 5-7 days for $500–$1,000. Free audit?</p><p>Best,<br/>Vishal</p>` };
-  return { subject: `Quick thought on ${company}'s website`, html: `<p>Hi ${firstName},</p><p>I came across ${company} and think there's an opportunity to win more business with a sharper website.</p><p>I build modern sites for US founders in 5-7 days for $500–$1,000. Free mockup — want to see?</p><p>Reply YES and I'll send it over.</p><p>Best,<br/>Vishal</p>` };
+    return {
+      subject: `${firstName} — honest question`,
+      html: `<p>Hi ${firstName},</p><p>You help clients with their marketing — I'm curious if ${company}'s own website is generating the leads you want.</p><p>I help founders in your space improve this. Happy to share what I've seen work if you're open to it.</p><p>Vishal</p>`
+    };
+
+  if (["real estate","construction","architecture"].some(x => i.includes(x)))
+    return {
+      subject: `quick thought on ${company}`,
+      html: `<p>Hi ${firstName},</p><p>I work with founders in real estate and construction who want their website to better reflect the quality of their work.</p><p>Is that something you're thinking about for ${company}?</p><p>Vishal</p>`
+    };
+
+  if (["healthcare","dental","medical","health"].some(x => i.includes(x)))
+    return {
+      subject: `question about ${company}`,
+      html: `<p>Hi ${firstName},</p><p>Patients are checking websites before choosing a provider. I help healthcare founders make sure ${company} makes the right first impression.</p><p>Is improving your website something on your list this year?</p><p>Vishal</p>`
+    };
+
+  // Default
+  return {
+    subject: `quick question, ${firstName}`,
+    html: `<p>Hi ${firstName},</p><p>I came across ${company} and wanted to reach out directly.</p><p>I help founders improve how their business looks online — it's something I've been doing for a while and I enjoy it.</p><p>Is your website something you're happy with, or is it on your list to improve?</p><p>Vishal</p>`
+  };
 }
 
 export default async function handler(req, res) {
