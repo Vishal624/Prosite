@@ -58,7 +58,7 @@ export default async function handler(req, res) {
             method: "POST",
             headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
             body: JSON.stringify({
-              from: "Vishal from ProSites <outreach@pro-sites.online>",
+              from: "Vishal from ProSites <outreach@pro-sites.in>",
               to: lead.email,
               subject: tpl.subject(lead.company),
               html: tpl.html(lead.firstName, lead.company),
@@ -116,7 +116,7 @@ export default async function handler(req, res) {
           const r = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.online>", to: lead.email, subject: tmpl.subject(lead.company), html: tmpl.html(lead.firstName, lead.company) }),
+            body: JSON.stringify({ from: "Vishal from ProSites <outreach@pro-sites.in>", to: lead.email, subject: tmpl.subject(lead.company), html: tmpl.html(lead.firstName, lead.company) }),
           });
           if (r.ok) {
             await prisma.followup.update({ where: { id: fu.id }, data: { status: "sent", sentAt: new Date() } });
